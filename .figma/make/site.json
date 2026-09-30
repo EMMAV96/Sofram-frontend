@@ -1,0 +1,10 @@
+{
+  "description": "Simplify communication by easily sharing and managing your needs or requests in one place for efficient collaboration and tracking.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
