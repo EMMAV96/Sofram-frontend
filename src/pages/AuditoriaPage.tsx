@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { listarAuditorias } from '../api/auditoriaApi';
 import { useAuth } from '../auth/AuthContext';
 import { canViewAuditoria } from '../auth/auditoriaPermissions';
@@ -78,7 +78,7 @@ function AuditoriaListado() {
               <caption className="sr-only">Registros de auditoría</caption>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--muted)' }}>
-                  {['Fecha y hora', 'Usuario', 'Rol', 'Acción', 'Módulo', 'Entidad', 'ID entidad', 'Detalle'].map(label =>
+                  {['Cuándo', 'Quién', 'Rol', 'Qué hizo', 'Módulo', 'Entidad', 'ID entidad', 'Detalle'].map(label =>
                     <th scope="col" key={label} className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap" style={{ color: 'var(--muted-foreground)' }}>{label}</th>)}
                 </tr>
               </thead>
@@ -89,7 +89,7 @@ function AuditoriaListado() {
                   <td className="px-3 py-3 whitespace-nowrap font-mono text-xs">{formatFechaHora(record.fechaHora)}</td>
                   <td className="px-3 py-3 text-xs font-medium">{record.username}</td>
                   <td className="px-3 py-3 text-xs whitespace-nowrap">{record.rol}</td>
-                  <td className="px-3 py-3 whitespace-nowrap"><EstadoBadge estado={record.accion} /></td>
+                  <td className="px-3 py-3 whitespace-nowrap"><EstadoBadge estado={record.accion.replace(/_/g, ' ')} /></td>
                   <td className="px-3 py-3 text-xs whitespace-nowrap">{record.modulo}</td>
                   <td className="px-3 py-3 text-xs">{record.entidad}</td>
                   <td className="px-3 py-3 font-mono text-xs text-center">{record.entidadId ?? '—'}</td>

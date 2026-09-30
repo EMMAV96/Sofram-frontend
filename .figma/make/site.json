@@ -1,10 +1,12 @@
 {
-  "description": "Simplify communication by easily sharing and managing your needs or requests in one place for efficient collaboration and tracking.",
+  "description": "Sistema de gestión integral para residencias de adultos mayores.",
   "robots": {
     "index": false
   },
   "accessibility": {
     "addBypassLinks": false,
     "ignoreReducedMotion": false
-  }
+  },
+  "title": "SOFRAM | Sistema de Gestión Geriátrica",
+  "language": "es"
 }

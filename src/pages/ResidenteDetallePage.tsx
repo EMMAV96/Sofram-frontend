@@ -1,4 +1,8 @@
-﻿import { useState } from 'react';
+import { useAuth } from '../auth/AuthContext';
+import { historiasClinicasPermissions } from '../auth/historiasClinicasPermissions';
+import { gestionMedicaPermissions } from '../auth/gestionMedicaPermissions';
+import { ReportDownloadButton } from '../components/reportes/ReportDownloadButton';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { obtenerHistorial, obtenerResidente } from '../api/residentesApi';
 import { CambioEstadoModal } from '../components/residentes/CambioEstadoModal';
@@ -16,6 +20,7 @@ export function ResidenteDetallePage() {
 
 function ResidenteDetalle({ id }: { id: string | undefined }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { canRead, canWrite } = useResidentesPermissions();
   const residenteId = Number(id);
   const validId = !!id && /^\d+$/.test(id) && Number.isSafeInteger(residenteId) && residenteId > 0;
@@ -61,11 +66,11 @@ function ResidenteDetalle({ id }: { id: string | undefined }) {
                 </div>
               </div>
             </div>
-            <button disabled title="Reporte clínico aún no disponible" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium opacity-50" style={{ background: 'var(--muted)', color: 'var(--secondary)', border: '1px solid var(--border)' }}>Reporte clínico PDF</button>
+            <ReportDownloadButton residenteId={residente.id} />
           </div>
         </div>
         <div className="flex gap-0.5 overflow-x-auto" style={{ borderBottom: '1px solid var(--border)' }}>
-          {tabs.map(t => <button key={t.key} onClick={() => setTab(t.key)} aria-pressed={tab === t.key} className="px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-all" style={{ borderBottom: tab === t.key ? '2px solid var(--primary)' : '2px solid transparent', color: tab === t.key ? 'var(--primary)' : 'var(--muted-foreground)', marginBottom: -1 }}>{t.label}</button>)}
+          {tabs.filter(t => (t.key !== 'historia' || historiasClinicasPermissions(user?.rol).canRead) && (t.key !== 'medica' || gestionMedicaPermissions(user?.rol).canAccess)).map(t => <button key={t.key} onClick={() => setTab(t.key)} aria-pressed={tab === t.key} className="px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-all" style={{ borderBottom: tab === t.key ? '2px solid var(--primary)' : '2px solid transparent', color: tab === t.key ? 'var(--primary)' : 'var(--muted-foreground)', marginBottom: -1 }}>{t.label}</button>)}
         </div>
         {tab === 'datos' && <div className="rounded-xl p-6" style={cardStyle}>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -97,7 +102,7 @@ function ResidenteDetalle({ id }: { id: string | undefined }) {
         </div>}
         {['historia', 'medica', 'actividades'].includes(tab) && <div className="rounded-xl p-5" style={cardStyle}>
           <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--primary)', fontFamily: 'Lora, serif' }}>{tabs.find(item => item.key === tab)?.label}</h3>
-          <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>Esta sección aún no está integrada. Información no disponible temporalmente.</p>
+          <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>Consulte la información y las acciones disponibles en el módulo correspondiente.</p><button type="button" className="mt-3 px-4 py-2 rounded-lg text-sm" style={primaryStyle} onClick={() => navigate(tab === 'historia' ? `/historia-clinica?residenteId=${residente.id}` : tab === 'medica' ? `/gestion-medica?residenteId=${residente.id}` : '/actividades')}>Abrir {tabs.find(item => item.key === tab)?.label}</button>
         </div>}
         {tab === 'historial' && <div className="rounded-xl p-5" style={cardStyle}>
           <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--primary)', fontFamily: 'Lora, serif' }}>Historial de estados</h3>

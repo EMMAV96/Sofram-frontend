@@ -1,8 +1,10 @@
+import type { Role } from './roles';
+import { ErrorNotice } from '../components/residentes/shared';
 import { Navigate, Outlet, useLocation } from 'react-router';
 import { useAuth } from './AuthContext';
 
-export function ProtectedRoute() {
-  const { loading, isAuthenticated } = useAuth();
+export function ProtectedRoute({ canAccess }: { canAccess?: (role: Role | undefined) => boolean } = {}) {
+  const { loading, isAuthenticated, role } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -13,5 +15,6 @@ export function ProtectedRoute() {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
+  if (canAccess && !canAccess(role)) return <ErrorNotice message="Acceso no autorizado." />;
   return <Outlet />;
 }

@@ -27,8 +27,8 @@ function DatosActividad({ actividad }: { actividad: ActividadResponse }) {
   const empleado = empleados.data?.find(e => e.id === actividad.empleadoId);
   return <>
     <h3 style={{ fontFamily: 'Lora, serif', fontWeight: 600, fontSize: 16, color: 'var(--primary)' }}>{actividad.nombre}</h3>
-    <div className="space-y-2 text-sm">
-      <p className="whitespace-pre-wrap break-words">{actividad.descripcion || 'Sin descripción'}</p>
+    <div className="grid grid-cols-2 gap-2 text-sm">
+      <p className="col-span-2 whitespace-pre-wrap break-words">{actividad.descripcion || 'Sin descripción'}</p>
       <p>Tipo: {actividad.tipo}</p><p>Duración: {actividad.duracion}</p><p>Cupo máximo: {actividad.cupoMaximo}</p><p>Estado: {actividad.estado}</p>
       {user?.rol === 'ADMINISTRADOR' ? <>
         {empleados.loading && <p role="status">Cargando responsable…</p>}
@@ -67,12 +67,19 @@ function Participantes({ actividad, fecha }: { actividad: ActividadResponse; fec
       {full && <p className="text-sm font-medium">Cupo completo</p>}
       <button disabled={full || !residentsReady} onClick={() => { setSuccess(''); setModal('crear'); }} className="px-3 py-2 rounded-lg text-xs font-semibold disabled:opacity-50" style={primaryStyle}>Agregar participante</button>
       {participaciones.data!.length === 0 && <p className="text-sm">No hay participantes registrados.</p>}
-      <div className="space-y-3">{participaciones.data!.map(p => {
+      <div className="hidden sm:grid grid-cols-[1fr_auto_auto] gap-5 text-xs font-semibold text-muted-foreground border-b border-border pb-2"><span>Residente</span><span>Asistencia</span><span>Acciones</span></div>
+      <div className="participant-list">{participaciones.data!.map(p => {
         const residente = residentes.data?.find(r => r.id === p.residenteId);
-        return <div key={p.id} className="rounded-lg p-3 text-xs space-y-1" style={{ border: '1px solid var(--border)' }}>
-          <p className="font-medium">{residente ? `${residente.apellido}, ${residente.nombre}` : `Residente #${p.residenteId}`}</p>
-          <p>DNI: {residente?.dni ?? 'No disponible'}</p><p>Fecha: {formatFecha(p.fecha)}</p><p>Estado: {p.estado}</p><p>Asistencia: {p.asistencia ? 'Sí' : 'No'}</p><p className="whitespace-pre-wrap break-words">Observaciones: {p.observaciones || '—'}</p>
-          <button onClick={() => { setSuccess(''); setModal(p); }} className="px-2 py-1 rounded text-xs" style={inputStyle}>Actualizar asistencia</button>
+        return <div key={p.id} className="participant-row text-xs">
+          <p className="font-medium break-words">{residente ? `${residente.apellido}, ${residente.nombre}` : `Residente #${p.residenteId}`}</p>
+          <span className="rounded-full px-2 py-1" style={{ background: p.asistencia ? 'var(--green-soft)' : 'var(--gold-soft)', color: p.asistencia ? 'var(--success)' : 'var(--warning)' }}>{p.asistencia ? 'Presente' : 'Ausente'}</span>
+          <details><summary aria-label={`Acciones de ${residente?.nombre ?? 'participante'}`} title="Acciones del participante">⋯</summary>
+            <div className="bg-muted rounded-lg p-3 mt-2 space-y-2">
+              <p>DNI {residente?.dni ?? 'No disponible'} · {formatFecha(p.fecha)} · {p.estado}</p>
+              <p className="whitespace-pre-wrap break-words">{p.observaciones || 'Sin observaciones'}</p>
+              <button type="button" onClick={() => { setSuccess(''); setModal(p); }} className="px-3 py-2 rounded-lg text-xs" style={inputStyle}>Registrar asistencia</button>
+            </div>
+          </details>
         </div>;
       })}</div>
     </>}

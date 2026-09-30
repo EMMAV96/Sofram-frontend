@@ -1,3 +1,4 @@
+import { ResidentSelector } from '../residentes/ResidentSelector';
 import { useRef, useState, type FormEvent } from 'react';
 import { crearParticipacion, actualizarAsistencia, type ActividadResponse, type ParticipacionActividadResponse } from '../../api/actividadesApi';
 import type { ResidenteResponse } from '../../api/residentesApi';
@@ -13,6 +14,7 @@ type Props = { actividad: ActividadResponse; onClose: () => void; onSaved: () =>
 export function ParticipacionModal(props: Props) {
   const { user } = useAuth();
   const allowed = canManageParticipaciones(user?.rol);
+  const [residentId, setResidentId] = useState('');
   const [busy, setBusy] = useState(false);
   const submitting = useRef(false);
   const [error, setError] = useState('');
@@ -37,23 +39,22 @@ export function ParticipacionModal(props: Props) {
     submitting.current = true; setBusy(true);
     try {
       if (props.mode === 'crear') await crearParticipacion({ actividadId: props.actividad.id, residenteId: Number(value('residenteId')), fecha: value('fecha'), asistencia: false, estado: value('estado'), observaciones: value('observaciones') || null });
-      else await actualizarAsistencia(props.participacion.id, { asistencia: data.get('asistencia') === 'on', estado: value('estado'), observaciones: value('observaciones') || null });
+      else await actualizarAsistencia(props.participacion.id, { asistencia: data.get('asistencia') === 'true', estado: value('estado'), observaciones: value('observaciones') || null });
       props.onSaved();
     } catch (error: unknown) { setError(errorMessage(error)); setErrors(fieldErrors(error)); }
     finally { submitting.current = false; setBusy(false); }
   }
   if (!allowed) return null;
-  return <Modal title={props.mode === 'crear' ? 'Agregar participante' : 'Actualizar asistencia'} busy={busy} onClose={props.onClose}>
+  return <Modal compact={props.mode === 'asistencia'} title={props.mode === 'crear' ? 'Agregar participante' : 'Actualizar asistencia'} busy={busy} onClose={props.onClose}>
     <form onSubmit={submit} className="space-y-4">
       <p className="text-sm font-medium">{props.actividad.nombre}</p>
+      {props.mode === 'crear' && <div className="rounded-lg bg-muted px-3 py-2 text-xs flex flex-wrap justify-between gap-2"><span>Participantes actuales: {props.participaciones.length} / {props.actividad.cupoMaximo}</span><strong>Cupos disponibles: {Math.max(0, props.actividad.cupoMaximo - props.participaciones.length)}</strong></div>}
       {error && <ErrorNotice message={error} />}
       {full && <p role="status">Cupo completo</p>}
       <fieldset disabled={busy} className="space-y-4">
         {props.mode === 'crear' ? <>
-          <div><label htmlFor="participante-residente" className="block text-xs font-medium mb-1">Residente *</label>
-            <select id="participante-residente" name="residenteId" required defaultValue="" aria-invalid={!!errors.residenteId} aria-describedby={errors.residenteId ? 'residenteId-error' : undefined} className="w-full px-3 py-2 rounded-lg text-sm" style={inputStyle}>
-              <option value="">Seleccione un residente</option>{elegibles.map(r => <option key={r.id} value={r.id}>{r.apellido}, {r.nombre} — DNI {r.dni}</option>)}
-            </select>
+          <div><p className="text-xs font-medium mb-1">Residente *</p>
+            <input type="hidden" name="residenteId" value={residentId} /><ResidentSelector residentes={elegibles} value={residentId} onChange={setResidentId} disabled={busy || full} />
             {elegibles.length === 0 && <p className="text-sm">No hay residentes disponibles para agregar.</p>}
             {errors.residenteId && <p id="residenteId-error" className="text-xs text-red-700">{errors.residenteId}</p>}
           </div>
@@ -64,7 +65,7 @@ export function ParticipacionModal(props: Props) {
           <p className="text-xs">La inscripción inicial se registra sin asistencia.</p>
         </> : <>
           <p className="text-sm">{props.residente ? `${props.residente.apellido}, ${props.residente.nombre} — DNI ${props.residente.dni}` : `Residente #${props.participacion.residenteId}`}</p>
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="asistencia" defaultChecked={props.participacion.asistencia} />Asistió</label>
+          <fieldset className="flex gap-3"><legend className="text-sm font-medium mb-2">Asistencia</legend>{[true, false].map(value => <label key={String(value)} className="flex items-center gap-2 rounded-lg border border-border px-4 py-2"><input type="radio" name="asistencia" value={String(value)} defaultChecked={props.participacion.asistencia === value} />{value ? 'Presente' : 'Ausente'}</label>)}</fieldset>
           {errors.asistencia && <p className="text-xs text-red-700">{errors.asistencia}</p>}
         </>}
         <div><label htmlFor="participante-estado" className="block text-xs font-medium mb-1">Estado *</label>
@@ -72,7 +73,7 @@ export function ParticipacionModal(props: Props) {
           {errors.estado && <p id="estado-error" className="text-xs text-red-700">{errors.estado}</p>}
         </div>
         <div><label htmlFor="participante-observaciones" className="block text-xs font-medium mb-1">Observaciones</label>
-          <textarea id="participante-observaciones" name="observaciones" rows={3} maxLength={1000} defaultValue={props.mode === 'asistencia' ? props.participacion.observaciones ?? '' : ''} aria-invalid={!!errors.observaciones} aria-describedby={errors.observaciones ? 'observaciones-error' : undefined} className="w-full px-3 py-2 rounded-lg text-sm" style={inputStyle} />
+          <textarea id="participante-observaciones" name="observaciones" rows={2} maxLength={1000} defaultValue={props.mode === 'asistencia' ? props.participacion.observaciones ?? '' : ''} aria-invalid={!!errors.observaciones} aria-describedby={errors.observaciones ? 'observaciones-error' : undefined} className="w-full px-3 py-2 rounded-lg text-sm" style={inputStyle} />
           {errors.observaciones && <p id="observaciones-error" className="text-xs text-red-700">{errors.observaciones}</p>}
         </div>
       </fieldset>
@@ -80,3 +81,4 @@ export function ParticipacionModal(props: Props) {
     </form>
   </Modal>;
 }
+

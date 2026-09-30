@@ -94,8 +94,8 @@ export function RegistroMedicoModal({ action, residente, detalles, onClose, onSa
       {errors.residenteId && <ErrorNotice message={errors.residenteId} />}
       {!seleccionarEmpleado && errors.empleadoId && <ErrorNotice message={errors.empleadoId} />}
       {errors.atencionMedicaId && <ErrorNotice message={errors.atencionMedicaId} />}
-      <fieldset disabled={busy} className="space-y-4">
-        {seleccionarEmpleado && <div>
+      <fieldset disabled={busy} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {seleccionarEmpleado && <div className="sm:col-span-2">
           <label htmlFor="empleadoId" className="block text-xs font-medium mb-1">Profesional *</label>
           <select id="empleadoId" name="empleadoId" required defaultValue="" disabled={empleados.loading || !!empleados.error || empleadosActivos.length === 0}
             aria-invalid={!!errors.empleadoId} aria-describedby={errors.empleadoId ? 'empleadoId-error' : undefined} className="w-full px-3 py-2.5 rounded-lg text-sm" style={inputStyle}>
@@ -104,7 +104,7 @@ export function RegistroMedicoModal({ action, residente, detalles, onClose, onSa
           </select>
           {errors.empleadoId && <p id="empleadoId-error" className="text-xs text-red-700 mt-1">{errors.empleadoId}</p>}
         </div>}
-        {action.mode === 'evaluacion' && <div>
+        {action.mode === 'evaluacion' && <div className="sm:col-span-2">
           <label htmlFor="detalleHistoriaClinicaId" className="block text-xs font-medium mb-1">Evolución clínica *</label>
           <select id="detalleHistoriaClinicaId" name="detalleHistoriaClinicaId" required defaultValue="" aria-invalid={!!errors.detalleHistoriaClinicaId} aria-describedby={errors.detalleHistoriaClinicaId ? 'detalle-error' : undefined} className="w-full px-3 py-2.5 rounded-lg text-sm" style={inputStyle}>
             <option value="">Seleccione una evolución</option>
@@ -113,7 +113,7 @@ export function RegistroMedicoModal({ action, residente, detalles, onClose, onSa
           {detalles.length === 0 && <p className="text-sm">Primero debe existir una evolución clínica para registrar la evaluación.</p>}
         </div>}
         {errors.detalleHistoriaClinicaId && <p id="detalle-error" className="text-xs text-red-700">{errors.detalleHistoriaClinicaId}</p>}
-        {fields[action.mode].map(field => <div key={field.name}>
+        {fields[action.mode].map(field => <div key={field.name} className={field.max && field.max > 150 ? 'sm:col-span-2' : undefined}>
           <label htmlFor={field.name} className="block text-xs font-medium mb-1">{field.label}{field.required ? ' *' : ''}</label>
           {field.max && field.max > 150 ? <textarea id={field.name} name={field.name} required={field.required} maxLength={field.max} rows={3} aria-invalid={!!errors[field.name]} aria-describedby={errors[field.name] ? `${field.name}-error` : undefined} className="w-full px-3 py-2.5 rounded-lg text-sm" style={inputStyle} />
             : <input id={field.name} name={field.name} type={field.date ? 'date' : 'text'} required={field.required} maxLength={field.max} aria-invalid={!!errors[field.name]} aria-describedby={errors[field.name] ? `${field.name}-error` : undefined} className="w-full px-3 py-2.5 rounded-lg text-sm" style={inputStyle} />}

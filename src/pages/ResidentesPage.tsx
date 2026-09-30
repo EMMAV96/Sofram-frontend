@@ -1,4 +1,5 @@
-﻿import { useState } from 'react';
+import { normalizeResidentSearch } from '../components/residentes/ResidentSelector';
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { listarResidentes } from '../api/residentesApi';
 import { CambioEstadoModal } from '../components/residentes/CambioEstadoModal';
@@ -14,7 +15,7 @@ export function ResidentesPage() {
   const [modal, setModal] = useState<{ type: 'crear' | 'editar' | 'estado'; id?: number } | null>(null);
   const [success, setSuccess] = useState('');
   const data = residentes.data ?? [];
-  const filtered = data.filter(r => `${r.nombre} ${r.apellido} ${r.dni}`.toLowerCase().includes(busqueda.toLowerCase()) && (!filtroEstado || r.estadoActual === filtroEstado));
+  const filtered = data.filter(r => normalizeResidentSearch(`${r.nombre} ${r.apellido} ${r.dni}`).includes(normalizeResidentSearch(busqueda)) && (!filtroEstado || r.estadoActual === filtroEstado));
   const estados = Array.from(new Set(data.map(r => r.estadoActual)));
 
   function saved() {
@@ -57,9 +58,9 @@ export function ResidentesPage() {
               <td className="px-4 py-3.5" style={{ color: 'var(--muted-foreground)' }}>{formatFecha(r.fechaIngreso)}</td>
               <td className="px-4 py-3.5" style={{ color: 'var(--muted-foreground)' }}>{r.obraSocial || '—'}</td>
               <td className="px-4 py-3.5" onClick={e => e.stopPropagation()}><div className="flex items-center gap-1.5">
-                <button onClick={() => navigate(`/residentes/${r.id}`)} className="px-2.5 py-1 rounded text-xs font-medium hover:bg-green-50" style={{ color: 'var(--primary)', border: '1px solid var(--border)' }}>Ver</button>
+                <button onClick={() => navigate(`/residentes/${r.id}`)} className="px-2.5 py-1 rounded text-xs font-medium hover:bg-green-50" style={{ color: 'var(--primary)', border: '1px solid var(--border)' }}>Ver ficha</button>
                 {canWrite && <>
-                  <button onClick={() => { setSuccess(''); setModal({ type: 'editar', id: r.id }); }} className="px-2.5 py-1 rounded text-xs font-medium hover:bg-blue-50" style={{ color: '#1D4ED8', border: '1px solid var(--border)' }}>Editar</button>
+                  <button onClick={() => { setSuccess(''); setModal({ type: 'editar', id: r.id }); }} className="px-2.5 py-1 rounded text-xs font-medium hover:bg-muted" style={{ color: 'var(--primary)', border: '1px solid var(--border)' }}>Editar</button>
                   <button onClick={() => { setSuccess(''); setModal({ type: 'estado', id: r.id }); }} className="px-2.5 py-1 rounded text-xs font-medium hover:bg-yellow-50" style={{ color: '#92400E', border: '1px solid var(--border)' }}>Estado</button>
                 </>}
               </div></td>

@@ -1,9 +1,18 @@
-﻿import { useState } from 'react';
+import { listarUsuarios } from '../api/usuariosApi';
+import { CuentaModal } from '../components/personal/CuentaModal';
+import { useState } from 'react';
 import * as api from '../api/personalApi';
 import { useAuth } from '../auth/AuthContext';
 import { canAccessPersonal } from '../auth/personalPermissions';
-import { PersonalModal, type PersonalAction } from '../components/personal/PersonalModal';
+import { PersonalModal } from '../components/personal/PersonalModal';
 import { ErrorNotice, cardStyle, formatFecha, inputStyle, primaryStyle, useApiResource } from '../components/residentes/shared';
+
+async function cargarCuentas(signal: AbortSignal) {
+  // Avoid a second network request from StrictMode's discarded initial effect.
+  await Promise.resolve();
+  signal.throwIfAborted();
+  return listarUsuarios(signal);
+}
 
 type Tab = 'empleados' | 'cargos' | 'turnos' | 'asignaciones';
 type EmployeeMode = 'editar' | 'baja' | 'asignar';
@@ -32,6 +41,9 @@ export function PersonalPage() {
 function Empleados({ asignaciones }: { asignaciones: boolean }) {
   const { user } = useAuth();
   const empleados = useApiResource(api.listarEmpleados, 'personal-empleados', canAccessPersonal(user?.rol));
+  const cuentas = useApiResource(cargarCuentas, 'personal-cuentas', canAccessPersonal(user?.rol) && !asignaciones);
+  const [cuentaEmpleado, setCuentaEmpleado] = useState<api.EmpleadoResponse | null>(null);
+  const cuentasPorEmpleado = new Map(cuentas.data?.map(c => [c.empleadoId, c]));
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('');
   const [selected, setSelected] = useState<{ id: number; mode?: EmployeeMode } | null>(null);
@@ -49,11 +61,20 @@ function Empleados({ asignaciones }: { asignaciones: boolean }) {
     </div>
     {asignaciones && <p className="text-sm">Seleccione un empleado para consultar su historial o asignar un turno.</p>}
     <Status resource={empleados} />
+    {!asignaciones && cuentas.error && <ErrorNotice message="No se pudieron consultar las cuentas de acceso." retry={cuentas.reload} />}
     {empleados.data && <div className="rounded-xl overflow-x-auto" style={cardStyle}>
       <table className="w-full text-sm">
         <thead><tr style={{ background: 'var(--muted)' }}>{['Apellido y nombre', 'DNI', 'Cargo', 'Contacto', 'Estado', 'Acciones'].map(h => <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase" style={{ color: 'var(--muted-foreground)' }}>{h}</th>)}</tr></thead>
         <tbody>{filtered.length === 0 ? <tr><td colSpan={6} className="p-8 text-center">{empleados.data.length ? 'Sin resultados para la búsqueda o el filtro.' : 'No hay empleados registrados.'}</td></tr> : filtered.map(e => <tr key={e.id} className="hover:bg-gray-50" style={{ borderBottom: '1px solid var(--border)' }}>
-          <td className="px-4 py-3 font-medium">{e.apellido}, {e.nombre}</td><td className="px-4 py-3 font-mono text-xs">{e.dni}</td>
+          <td className="px-4 py-3 font-medium">{e.apellido}, {e.nombre}
+            {!asignaciones && <div className="mt-2 text-xs font-normal">
+              {cuentas.loading ? <span>Cargando cuenta…</span> : cuentas.error ? <span>Cuenta no disponible</span> : cuentas.data && <details>
+                <summary className="cursor-pointer"><span className="rounded-full px-2 py-1" style={{ background: cuentasPorEmpleado.has(e.id) ? 'var(--green-soft)' : 'var(--gold-soft)' }}>Cuenta de acceso: {cuentasPorEmpleado.has(e.id) ? 'Configurada' : 'Sin configurar'}</span></summary>
+                <div className="mt-2 space-y-1">{cuentasPorEmpleado.has(e.id) && <><p>Usuario: {cuentasPorEmpleado.get(e.id)!.username}</p><p>Rol del sistema: {cuentasPorEmpleado.get(e.id)!.rol}</p></>}
+                <button type="button" onClick={() => setCuentaEmpleado(e)} className="text-primary underline py-1">{cuentasPorEmpleado.has(e.id) ? 'Administrar cuenta' : 'Crear cuenta'}</button></div>
+              </details>}
+            </div>}
+          </td><td className="px-4 py-3 font-mono text-xs">{e.dni}</td>
           <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full text-xs" style={{ background: 'var(--muted)', color: 'var(--secondary)' }}>{e.cargoNombre}</span></td>
           <td className="px-4 py-3 text-xs"><p>{e.telefono || '—'}</p><p>{e.email || '—'}</p></td>
           <td className="px-4 py-3"><Estado empleado={e} />{!e.activo && e.fechaBaja && <p className="text-xs mt-1">{formatFecha(e.fechaBaja)}</p>}</td>
@@ -66,6 +87,7 @@ function Empleados({ asignaciones }: { asignaciones: boolean }) {
         </tr>)}</tbody>
       </table>
     </div>}
+    {cuentaEmpleado && <CuentaModal empleado={cuentaEmpleado} cuenta={cuentasPorEmpleado.get(cuentaEmpleado.id)} onClose={() => setCuentaEmpleado(null)} onSaved={message => { setCuentaEmpleado(null); setSuccess(message); cuentas.reload(); }} />}
     {creating && <PersonalModal action={{ mode: 'crear' }} onClose={() => setCreating(false)} onSaved={() => { setCreating(false); setSuccess('Empleado creado correctamente.'); setSearch(''); setFilter(''); empleados.reload(); }} />}
   </div>;
 }

@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { NavLink, Outlet, useNavigate, useLocation } from 'react-router';
-import { SoframIcon } from '../components/Logo';
+import { SoframLogo } from '../components/Logo';
+import { NavIcon } from '../components/NavIcon';
+import { ResidenteModal } from '../components/residentes/ResidenteModal';
+import { useEffect, useState } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { habitacionesPermissions } from '../auth/habitacionesPermissions';
 import { historiasClinicasPermissions } from '../auth/historiasClinicasPermissions';
@@ -36,9 +38,16 @@ const ROUTE_TITLES: Record<string, string> = {
 };
 
 export function AppLayout() {
-  const navigate = useNavigate();
   const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  useEffect(() => { setSidebarOpen(false); setUserMenuOpen(false); }, [location.pathname]);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  useEffect(() => {
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') { setSidebarOpen(false); setUserMenuOpen(false); } };
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, []);
   const { user, logout } = useAuth();
 
   const currentTitle = ROUTE_TITLES[location.pathname] ?? 'SOFRAM';
@@ -49,25 +58,17 @@ export function AppLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--background)' }}>
+      {sidebarOpen && <button aria-label="Cerrar navegación" className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
       {/* Sidebar */}
       <aside
-        className="flex flex-col h-full shrink-0 overflow-y-auto"
+        id="main-navigation" className={`fixed inset-y-0 left-0 z-50 lg:static flex flex-col h-full shrink-0 overflow-y-auto transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
         style={{
           width: 'var(--sidebar-width)',
           background: 'var(--primary)',
           borderRight: '1px solid rgba(255,255,255,0.08)',
         }}
       >
-        {/* Logo */}
-        <div className="flex items-center gap-3 px-5 py-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-          <SoframIcon size={42} />
-          <div>
-            <div style={{ color: '#F7F5F0', fontFamily: 'Lora, serif', fontWeight: 700, fontSize: 18, letterSpacing: '0.06em' }}>SOFRAM</div>
-            <div style={{ color: 'var(--accent)', fontSize: 9, fontWeight: 500, letterSpacing: '0.05em', lineHeight: 1.3 }}>
-              RESIDENCIA<br/>ADULTOS MAYORES
-            </div>
-          </div>
-        </div>
+        <div className="px-5 py-6 text-white border-b border-white/15"><SoframLogo size={76} textColor="var(--primary-foreground)" /></div>
 
         {/* Navigation */}
         <nav className="flex-1 py-4 px-3">
@@ -83,7 +84,7 @@ export function AppLayout() {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 mb-0.5 rounded-md text-sm font-medium transition-all ${
                   isActive
-                    ? 'text-white'
+                    ? 'text-white bg-white/15 border-l-2 border-accent'
                     : 'text-green-200 hover:text-white hover:bg-white/10'
                 }`
               }
@@ -93,7 +94,7 @@ export function AppLayout() {
                   : {}
               }
             >
-              <span className="text-base w-5 text-center">{item.icon}</span>
+              <NavIcon name={item.path.slice(1)} />
               <span>{item.label}</span>
             </NavLink>
           ))}
@@ -105,14 +106,18 @@ export function AppLayout() {
         </div>
       </aside>
 
+      {profileOpen && <ResidenteModal title="Mi perfil" busy={false} onClose={() => setProfileOpen(false)}>
+        <dl className="grid gap-4">{[['Usuario', user?.username], ['Rol', user?.rol], ['ID de usuario', user?.id], ['ID de empleado', user?.empleadoId]].map(([label, value]) => <div key={label}><dt className="text-xs text-muted-foreground">{label}</dt><dd className="font-medium">{value ?? '—'}</dd></div>)}</dl>
+      </ResidenteModal>}
       {/* Main content area */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         {/* Topbar */}
         <header
-          className="shrink-0 flex items-center justify-between px-6 h-14"
+          className="institutional-header shrink-0 flex items-center justify-between px-3 sm:px-6 h-18"
           style={{ background: 'var(--card)', borderBottom: '1px solid var(--border)' }}
         >
-          <div>
+          <div className="flex items-center gap-3">
+            <button type="button" className="lg:hidden p-2" aria-label="Abrir navegación" aria-controls="main-navigation" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)}>☰</button>
             <h1 style={{ fontFamily: 'Lora, serif', fontWeight: 600, fontSize: 18, color: 'var(--primary)', lineHeight: 1 }}>
               {currentTitle}
             </h1>
@@ -121,18 +126,18 @@ export function AppLayout() {
             {/* User menu */}
             <div className="relative">
               <button
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                aria-expanded={userMenuOpen} aria-label="Menú de usuario" onKeyDown={e => { if (e.key === 'Escape') setUserMenuOpen(false); }} onClick={() => setUserMenuOpen(!userMenuOpen)}
                 className="flex items-center gap-2.5 px-3 py-1.5 rounded-md hover:bg-gray-50 transition-colors"
               >
                 <div
                   className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold"
                   style={{ background: 'var(--primary)' }}
                 >
-                  A
+                  {user?.username?.slice(0, 1).toUpperCase()}
                 </div>
-                <div className="text-left">
+                <div className="text-left max-w-36 sm:max-w-64">
                   <p className="text-sm font-medium" style={{ color: 'var(--foreground)', lineHeight: 1.2 }}>{typeof user?.username === 'string' ? user.username : 'Usuario'}</p>
-                  <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>{user?.rol}</p>
+                  <p className="text-xs truncate" title={user?.rol} style={{ color: 'var(--muted-foreground)' }}>{user?.rol}</p>
                 </div>
                 <svg className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -143,7 +148,7 @@ export function AppLayout() {
                   className="absolute right-0 top-full mt-1 w-48 rounded-lg shadow-lg py-1 z-50"
                   style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
                 >
-                  <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50" style={{ color: 'var(--foreground)' }}>
+                  <button onClick={() => { setUserMenuOpen(false); setProfileOpen(true); }} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50" style={{ color: 'var(--foreground)' }}>
                     Mi perfil
                   </button>
                   <div style={{ borderTop: '1px solid var(--border)', margin: '4px 0' }} />
@@ -161,7 +166,7 @@ export function AppLayout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8">
           <Outlet />
         </main>
       </div>

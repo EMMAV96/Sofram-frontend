@@ -1,4 +1,5 @@
-﻿import { useState } from 'react';
+import { ReportDownloadButton } from '../components/reportes/ReportDownloadButton';
+import { useState } from 'react';
 import { listarHabitaciones, type HabitacionResponse } from '../api/habitacionesApi';
 import { useAuth } from '../auth/AuthContext';
 import { habitacionesPermissions } from '../auth/habitacionesPermissions';
@@ -63,7 +64,7 @@ export function HabitacionesPage() {
         </select>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <button disabled title="Reporte no disponible todavía" className="px-3 py-2 rounded-lg text-sm font-medium opacity-50" style={{ background: 'var(--muted)', color: 'var(--secondary)', border: '1px solid var(--border)' }}>📄 Reporte PDF</button>
+        <ReportDownloadButton />
         {canWrite && <button onClick={() => open({ mode: 'crear' })} className="px-3 py-2 rounded-lg text-sm font-semibold" style={primaryStyle}>+ Nueva habitación</button>}
         <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
           {(['tarjetas', 'tabla'] as const).map(v => <button key={v} onClick={() => setVista(v)} aria-label={`Vista de ${v}`} aria-pressed={vista === v} className="px-3 py-2 text-xs font-medium transition-all capitalize" style={{ background: vista === v ? 'var(--primary)' : 'var(--card)', color: vista === v ? 'white' : 'var(--muted-foreground)' }}>{v === 'tarjetas' ? '⊞' : '≡'}</button>)}

@@ -1,4 +1,6 @@
-﻿import { useState } from 'react';
+import { useSearchParams } from 'react-router';
+import { ResidentSelector } from '../components/residentes/ResidentSelector';
+import { useState } from 'react';
 import { ApiError } from '../api/apiClient';
 import * as api from '../api/gestionMedicaApi';
 import { listarResidentes, type ResidenteResponse } from '../api/residentesApi';
@@ -19,24 +21,16 @@ export function GestionMedicaPage() {
   const { user } = useAuth();
   const permission = gestionMedicaPermissions(user?.rol);
   const residentes = useApiResource(listarResidentes, 'residentes-medica', permission.canAccess);
-  const [id, setId] = useState('');
-  const [search, setSearch] = useState('');
+  const [params] = useSearchParams();
+  const [id, setId] = useState(params.get('residenteId') ?? '');
   const selected = residentes.data?.find(r => String(r.id) === id);
-  const filtered = residentes.data?.filter(r => String(r.id) === id || `${r.nombre} ${r.apellido} ${r.dni}`.toLowerCase().includes(search.trim().toLowerCase())) ?? [];
   if (!permission.canAccess) return <ErrorNotice message="Acceso no autorizado a Gestión Médica." />;
   return <div className="space-y-5">
     <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>Gestión médica integral de residentes. Seleccione un residente para ver sus registros específicos.</p>
-    <div className="rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4" style={cardStyle}>
-      <label htmlFor="medica-residente" className="text-sm font-medium">Residente:</label>
-      <input type="search" aria-label="Buscar residente" placeholder="Nombre, apellido o DNI…" value={search} onChange={e => setSearch(e.target.value)} className="px-3 py-2 rounded-lg text-sm" style={inputStyle} />
-      <select id="medica-residente" disabled={residentes.loading || !!residentes.error} value={id} onChange={e => setId(e.target.value)} className="flex-1 min-w-0 px-3 py-2 rounded-lg text-sm" style={inputStyle}>
-        <option value="">Seleccione un residente</option>
-        {filtered.map(r => <option key={r.id} value={r.id}>{r.apellido}, {r.nombre} — DNI {r.dni} — Hab. {r.habitacionNumero}</option>)}
-      </select>
-    </div>
+    <ResidentSelector residentes={residentes.data ?? []} value={id} onChange={setId} loading={residentes.loading} disabled={!!residentes.error} />
     <Feedback resource={residentes} />
     {residentes.data && (residentes.data.length === 0 ? <p>No hay residentes registrados.</p> : <>
-      {filtered.length === 0 && <p className="text-sm">No hay resultados para la búsqueda.</p>}
+
       {selected ? <ResidenteMedico key={`${selected.id}-${user?.rol}`} residente={selected} /> : <p className="text-sm">Seleccione un residente para consultar sus registros.</p>}
     </>)}
   </div>;

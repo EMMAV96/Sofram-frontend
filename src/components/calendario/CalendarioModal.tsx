@@ -47,14 +47,14 @@ export function CalendarioModal(props: Props) {
     finally { submitting.current = false; setBusy(false); }
   }
   if (!allowed) return null;
-  return <Modal title={props.mode === 'calendario' ? 'Nuevo calendario' : 'Agregar detalle'} busy={busy} onClose={props.onClose}>
+  return <Modal title={props.mode === 'calendario' ? 'Nuevo calendario' : 'Agregar horario'} busy={busy} onClose={props.onClose}>
     <form onSubmit={submit} className="space-y-4">
       {props.mode === 'detalle' && <p className="rounded-lg p-3 text-sm" style={{ background: 'var(--muted)' }}>{props.calendario.nombre} · {props.calendario.periodo} · {props.calendario.anio}</p>}
       {error && <ErrorNotice message={error} />}
       <fieldset disabled={busy} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {fields.map(field => <div key={field.name}>
           <label htmlFor={`calendario-${field.name}`} className="block text-xs font-medium mb-1">{field.label} *</label>
-          <input id={`calendario-${field.name}`} name={field.name} type={field.type ?? 'text'} required maxLength={field.max} min={field.min} step={field.type === 'time' || field.type === 'number' ? 1 : undefined}
+          <input id={`calendario-${field.name}`} name={field.name} placeholder={field.name === 'nombre' ? 'Nombre del calendario' : field.name === 'periodo' ? 'Período de organización' : undefined} type={field.type ?? 'text'} required maxLength={field.max} min={field.min} step={field.type === 'time' || field.type === 'number' ? 1 : undefined}
             aria-invalid={!!errors[field.name]} aria-describedby={errors[field.name] ? `calendario-${field.name}-error` : undefined} className="w-full px-3 py-2.5 rounded-lg text-sm" style={inputStyle} />
           {errors[field.name] && <p id={`calendario-${field.name}-error`} className="text-xs text-red-700 mt-1">{errors[field.name]}</p>}
         </div>)}

@@ -2,20 +2,31 @@
 @import 'tailwindcss';
 
 :root {
-  --background: #F7F5F0;
+  --background: #FAF9F3;
   --foreground: #1A2E1F;
   --card: #FFFFFF;
   --card-foreground: #1A2E1F;
-  --primary: #1B4332;
+  --primary: #204D36;
+  --primary-hover: #163D29;
+  --olive: #85943E;
+  --olive-soft: #F0F2DC;
+  --gold-soft: #FBF2D9;
+  --green-soft: #E7F2E5;
+  --shadow-card: 0 4px 16px #204d360a;
   --primary-foreground: #F7F5F0;
-  --secondary: #52796F;
+  --secondary: #507A3B;
   --secondary-foreground: #F7F5F0;
-  --muted: #E8E3D9;
-  --muted-foreground: #6B7A6E;
-  --accent: #C9A84C;
-  --accent-foreground: #1B4332;
-  --border: #D0C9BC;
-  --ring: #52796F;
+  --muted: #EEF1E3;
+  --muted-foreground: #53614F;
+  --accent: #C5A044;
+  --accent-foreground: #204D36;
+  --border: #D7DFCF;
+  --ring: #507A3B;
+  --success: #28613C;
+  --warning: #87630E;
+  --danger: #B42332;
+  --surface: var(--card);
+  --text: var(--foreground);
   --radius: 0.5rem;
   --sidebar-width: 260px;
 }
@@ -26,6 +37,13 @@
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-surface: var(--surface);
+  --color-text: var(--text);
+  --color-text-muted: var(--muted-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -65,3 +83,30 @@ h1, h2, h3, h4 {
 
 /* Transitions */
 a, button { transition: all 0.15s ease; }
+
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+button:not(:disabled), summary { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+input:not([type=checkbox]):not([type=radio]), select, textarea { min-height: 42px; }
+dialog { box-shadow: 0 24px 70px #173c3426; }
+dialog::backdrop { background: #142e2566; backdrop-filter: blur(3px); }
+main > div > .rounded-xl, section.rounded-xl { box-shadow: 0 3px 14px #254a3010; }
+thead { background: var(--muted); }
+tbody tr:hover { background: #f3f6ed; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; } }
+
+.brand-lockup { display:flex; flex-direction:column; align-items:center; gap:.65rem; text-align:center; }
+.brand-subtitle { font-size:11px; color:inherit; opacity:.8; }
+.institutional-header { background:var(--background) !important; border-top:3px solid var(--accent); }
+.dashboard-stat { border-top:3px solid var(--stat-accent) !important; background:var(--stat-surface) !important; box-shadow:var(--shadow-card); }
+.dashboard-stat .stat-icon { color:var(--stat-accent); background:var(--card); border-radius:12px; padding:9px; width:38px; height:38px; }
+.dashboard-panel-title { border-bottom:1px solid var(--border); padding-bottom:12px; }
+.participant-list { max-height:360px; overflow-y:auto; scrollbar-gutter:stable; }
+.participant-row { display:grid; grid-template-columns:minmax(0,1fr) auto auto; align-items:center; gap:12px; padding:12px 4px; border-bottom:1px solid var(--border); }
+.participant-row summary { list-style:none; padding:4px 10px; border:1px solid var(--border); border-radius:8px; }
+.participant-row details[open] { grid-column:1/-1; }
+.clinical-timeline { max-height:520px; overflow-y:auto; padding:4px 10px 0 4px; }
+.activity-card { border-left:4px solid var(--olive) !important; }
+.activity-card[aria-pressed=true] { background:var(--olive-soft) !important; border-left-color:var(--accent) !important; }
+.activity-card:hover { box-shadow:var(--shadow-card); }
+@media(max-width:639px) { .participant-row { gap:8px; } .participant-row > p { font-size:12px; } }

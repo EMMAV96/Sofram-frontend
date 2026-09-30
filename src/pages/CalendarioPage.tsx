@@ -63,15 +63,15 @@ function CalendarioSeleccionado({ calendarioId, controls }: { calendarioId: numb
     {calendario.loading ? <p role="status">Cargando calendario…</p> : calendario.error ? <ErrorNotice message={calendario.error} retry={calendario.reload} /> : calendario.data && <>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div><h2 style={{ fontFamily: 'Lora, serif', fontSize: 18, fontWeight: 600, color: 'var(--primary)' }}>{calendario.data.nombre}</h2><p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>{calendario.data.periodo} · {calendario.data.anio} · {calendario.data.estado}</p></div>
-        <div className="flex flex-wrap items-center gap-2">{canCreateDetalleCalendario(user?.rol) && <button onClick={() => { setSuccess(''); setCreating(true); }} className="px-3 py-1.5 rounded-lg text-xs" style={inputStyle}>Agregar detalle</button>}{controls}</div>
+        <div className="flex flex-wrap items-center gap-2">{canCreateDetalleCalendario(user?.rol) && <button onClick={() => { setSuccess(''); setCreating(true); }} className="px-3 py-1.5 rounded-lg text-xs" style={inputStyle}>Agregar horario</button>}{controls}</div>
       </div>
-      {detalles.loading ? <p role="status">Cargando detalles…</p> : detalles.error ? <ErrorNotice message={detalles.error} retry={detalles.reload} /> : detalles.data && (
-        detalles.data.length === 0 ? <div className="rounded-xl p-5 text-sm" style={cardStyle}>Este calendario aún no tiene detalles.</div>
+      {detalles.loading ? <p role="status">Cargando horarios…</p> : detalles.error ? <ErrorNotice message={detalles.error} retry={detalles.reload} /> : detalles.data && (
+        detalles.data.length === 0 ? <div className="rounded-xl p-5 text-sm" style={cardStyle}>Este calendario aún no tiene horarios.</div>
           : <VistaTemporal detalles={detalles.data} initialDate={focusDate ?? detalles.data[0].fecha} actividades={actividades} />
       )}
     </>}
     {creating && calendario.data && <CalendarioModal mode="detalle" calendario={calendario.data} onClose={() => setCreating(false)} onSaved={detalle => {
-      setCreating(false); setSuccess('Detalle agregado correctamente.'); setFocusDate(detalle.fecha); detalles.reload();
+      setCreating(false); setSuccess('Horario agregado correctamente.'); setFocusDate(detalle.fecha); detalles.reload();
     }} />}
   </div>;
 }
@@ -88,7 +88,7 @@ function Franja({ detalle, actividades }: { detalle: api.DetalleCalendarioRespon
     <p className="font-semibold">{detalle.horaInicio} - {detalle.horaFin}</p><p>{detalle.estado}</p>
     {(!items || items.loading) && <p role="status" className="mt-1 opacity-70">Cargando actividades…</p>}
     {items?.error && <div role="alert" className="mt-1 text-red-700"><p>{items.error}</p><button type="button" onClick={() => actividades.retry(detalle.id)} className="underline">Reintentar actividades</button></div>}
-    {items?.data?.map(actividad => <Link key={actividad.id} to={`/actividades?actividadId=${actividad.id}`} data-actividad-id={actividad.id} data-detalle-calendario-id={actividad.detalleCalendarioId} className="block mt-2 rounded p-1 hover:underline" style={{ background: 'var(--card)' }}>
+    {items?.data?.map(actividad => <Link key={actividad.id} to={`/actividades?actividadId=${actividad.id}`} data-actividad-id={actividad.id} data-detalle-calendario-id={actividad.detalleCalendarioId} className="block mt-2 rounded p-1 hover:underline" style={{ background: 'var(--card)', borderLeft: `3px solid ${['var(--primary)', 'var(--secondary)', 'var(--accent)'][Array.from(actividad.tipo ?? '').reduce((sum, char) => sum + char.charCodeAt(0), 0) % 3]}` }}>
       <p className="font-semibold">{actividad.nombre}</p><p>{actividad.tipo} · {actividad.estado}</p>
     </Link>)}
   </div>;

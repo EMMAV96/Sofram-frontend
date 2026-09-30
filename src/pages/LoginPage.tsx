@@ -1,3 +1,4 @@
+import institutionalImage from '../imports/ChatGPT_Image_24_feb_2026__10_39_20_a.m.-20260224-133921.png';
 import { useState } from 'react';
 import { SoframLogo } from '../components/Logo';
 import { useAuth } from '../auth/AuthContext';
@@ -13,6 +14,7 @@ export function LoginPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    if (loading || sessionLoading) return;
     if (!usuario || !contrasena) {
       setError('Por favor complete todos los campos.');
       return;
@@ -32,43 +34,21 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen flex" style={{ background: 'var(--background)' }}>
-      {/* Left panel - branding */}
-      <div
-        className="hidden lg:flex flex-col justify-between w-5/12 p-12 relative overflow-hidden"
-        style={{ background: 'var(--primary)' }}
-      >
-        {/* Subtle botanical overlay */}
-        <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, #84A98C 0%, transparent 60%)' }} />
-        <div className="absolute bottom-0 left-0 w-full h-1/2 opacity-5" style={{ backgroundImage: 'radial-gradient(circle at 20% 80%, #C9A84C 0%, transparent 50%)' }} />
-
-        <div className="relative z-10">
-          <SoframLogo size={64} textColor="#F7F5F0" />
-        </div>
-
-        <div className="relative z-10">
-          <blockquote className="text-xl italic" style={{ color: 'rgba(247,245,240,0.85)', fontFamily: 'Lora, serif', lineHeight: 1.6 }}>
-            "Cuidar con profesionalismo,<br />registrar con precisión."
-          </blockquote>
-          <p className="mt-4 text-sm" style={{ color: 'rgba(247,245,240,0.45)' }}>
-            Sistema de gestión integral para residencias de adultos mayores.
-          </p>
-        </div>
-
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="w-8 h-px" style={{ background: 'var(--accent)' }} />
-          <p className="text-xs" style={{ color: 'rgba(247,245,240,0.4)', letterSpacing: '0.08em' }}>SOFRAM © 2026</p>
-        </div>
-      </div>
+      <section className="hidden lg:flex w-1/2 flex-col justify-center p-8 xl:p-12" style={{ background: 'var(--muted)' }}>
+        <img src={institutionalImage} alt="SOFRAM. Sistema de residencia de adultos mayores" className="w-full rounded-2xl shadow-sm" />
+        <blockquote className="mt-8 text-2xl xl:text-3xl leading-relaxed text-primary" style={{ fontFamily: 'Lora, serif' }}>Cuidar con profesionalismo,<br />registrar con precisión.</blockquote>
+        <p className="mt-4 text-sm text-muted-foreground">Sistema de gestión integral para residencias de adultos mayores.</p>
+      </section>
 
       {/* Right panel - form */}
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           {/* Mobile logo */}
-          <div className="lg:hidden mb-8 flex justify-center">
+          <div className="mb-6">
             <SoframLogo size={56} />
           </div>
 
-          <div className="mb-8">
+          <div className="mb-6">
             <h2 style={{ fontFamily: 'Lora, serif', fontSize: 28, fontWeight: 700, color: 'var(--primary)', marginBottom: 8 }}>
               Iniciar sesión
             </h2>
@@ -78,18 +58,18 @@ export function LoginPage() {
           </div>
 
           {error && (
-            <div className="mb-4 px-4 py-3 rounded-lg text-sm" style={{ background: '#FEE2E2', color: '#991B1B', border: '1px solid #FECACA' }}>
+            <div role="alert" className="mb-4 px-4 py-3 rounded-lg text-sm" style={{ background: '#FEE2E2', color: '#991B1B', border: '1px solid #FECACA' }}>
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--foreground)' }}>
+              <label htmlFor="login-password" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--foreground)' }}>
                 Usuario <span style={{ color: '#DC2626' }}>*</span>
               </label>
               <input
-                type="text"
+                id="login-username" type="text"
                 value={usuario}
                 onChange={e => setUsuario(e.target.value)}
                 placeholder="Ingrese su usuario"
@@ -111,12 +91,12 @@ export function LoginPage() {
               </label>
               <div className="relative">
                 <input
-                  type={showPass ? 'text' : 'password'}
+                  id="login-password" type={showPass ? 'text' : 'password'}
                   value={contrasena}
                   onChange={e => setContrasena(e.target.value)}
                   placeholder="Ingrese su contraseña"
                   autoComplete="current-password"
-                  className="w-full px-4 py-3 pr-12 rounded-lg text-sm outline-none transition-all"
+                  className="w-full px-4 py-3 pr-20 rounded-lg text-sm outline-none transition-all"
                   style={{
                     border: '1.5px solid var(--border)',
                     background: 'var(--card)',
@@ -127,11 +107,11 @@ export function LoginPage() {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPass(!showPass)}
+                  aria-label={showPass ? "Ocultar contraseña" : "Mostrar contraseña"} aria-pressed={showPass} onClick={() => setShowPass(!showPass)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-sm"
                   style={{ color: 'var(--muted-foreground)' }}
                 >
-                  {showPass ? '🙈' : '👁'}
+                  {showPass ? 'Ocultar' : 'Mostrar'}
                 </button>
               </div>
             </div>
@@ -151,8 +131,8 @@ export function LoginPage() {
             </button>
           </form>
 
-          <p className="mt-8 text-xs text-center" style={{ color: 'var(--muted-foreground)' }}>
-            POST /auth/login · JWT · Spring Boot
+          <p className="mt-5 text-xs text-center" style={{ color: 'var(--muted-foreground)' }}>
+            Acceso seguro para el equipo de la residencia.
           </p>
         </div>
       </div>

@@ -1,34 +1,28 @@
-﻿import { useState } from 'react';
+import { useSearchParams } from 'react-router';
+import { ResidentSelector } from '../components/residentes/ResidentSelector';
+import { useState } from 'react';
 import { ApiError } from '../api/apiClient';
 import { listarResidentes, type ResidenteResponse } from '../api/residentesApi';
 import { listarDetalles, obtenerHistoriaPorResidente, type HistoriaClinicaResponse } from '../api/historiasClinicasApi';
 import { useAuth } from '../auth/AuthContext';
 import { historiasClinicasPermissions } from '../auth/historiasClinicasPermissions';
 import { HistoriaClinicaModal, type HistoriaAction } from '../components/historiasClinicas/HistoriaClinicaModal';
-import { ErrorNotice, cardStyle, formatFecha, inputStyle, primaryStyle, useApiResource } from '../components/residentes/shared';
+import { ErrorNotice, cardStyle, formatFecha, primaryStyle, useApiResource } from '../components/residentes/shared';
 
 export function HistoriaClinicaPage() {
   const { user } = useAuth();
   const permissions = historiasClinicasPermissions(user?.rol);
   const residentes = useApiResource(listarResidentes, 'residentes-historia', permissions.canRead);
-  const [residenteId, setResidenteId] = useState('');
-  const [busqueda, setBusqueda] = useState('');
+  const [params] = useSearchParams();
+  const [residenteId, setResidenteId] = useState(params.get('residenteId') ?? '');
   const selected = residentes.data?.find(r => String(r.id) === residenteId);
-  const filtered = residentes.data?.filter(r => String(r.id) === residenteId || `${r.nombre} ${r.apellido} ${r.dni}`.toLowerCase().includes(busqueda.trim().toLowerCase())) ?? [];
   if (!permissions.canRead) return <ErrorNotice message="Acceso no autorizado al módulo Historia Clínica." />;
   return <div className="space-y-5">
-    <div className="rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4" style={cardStyle}>
-      <label htmlFor="historia-residente" className="text-sm font-medium shrink-0">Residente:</label>
-      <input type="search" aria-label="Buscar residente" placeholder="Nombre, apellido o DNI…" value={busqueda} onChange={event => setBusqueda(event.target.value)} className="px-3 py-2 rounded-lg text-sm" style={inputStyle} />
-      <select id="historia-residente" disabled={residentes.loading || !!residentes.error} value={residenteId} onChange={event => setResidenteId(event.target.value)} className="flex-1 min-w-0 px-3 py-2 rounded-lg text-sm" style={inputStyle}>
-        <option value="">Seleccione un residente</option>
-        {filtered.map(r => <option key={r.id} value={r.id}>{r.apellido}, {r.nombre} — DNI {r.dni} — Hab. {r.habitacionNumero}</option>)}
-      </select>
-    </div>
+    <ResidentSelector residentes={residentes.data ?? []} value={residenteId} onChange={setResidenteId} loading={residentes.loading} disabled={!!residentes.error} />
     {residentes.loading ? <p role="status">Cargando residentes…</p> : residentes.error ? <ErrorNotice message={residentes.error} retry={residentes.reload} />
       : residentes.data?.length === 0 ? <p role="status">No hay residentes registrados.</p>
       : <>
-        {filtered.length === 0 && <p role="status" className="text-sm">No hay residentes que coincidan con la búsqueda.</p>}
+
         {selected ? <HistoriaResidente key={`${selected.id}-${user?.rol}`} residente={selected} /> : <div className="rounded-xl p-5 text-sm" style={cardStyle}>Seleccione un residente para consultar su historia clínica.</div>}
       </>}
   </div>;
@@ -63,7 +57,7 @@ function HistoriaResidente({ residente }: { residente: ResidenteResponse }) {
       : data === null ? <div className="rounded-xl p-5 space-y-4" style={cardStyle}>
         <p className="text-sm">El residente aún no tiene historia clínica.</p>
         {permissions.canCreate && <button onClick={() => open({ mode: 'crear' })} className="px-4 py-2 rounded-lg text-sm font-semibold" style={primaryStyle}>Crear historia clínica</button>}
-      </div> : data && <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      </div> : data && <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
         <div className="rounded-xl p-5" style={cardStyle}>
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <h3 style={{ fontFamily: 'Lora, serif', fontWeight: 600, fontSize: 16, color: 'var(--primary)' }}>Datos de la historia clínica</h3>
@@ -86,6 +80,14 @@ function HistoriaResidente({ residente }: { residente: ResidenteResponse }) {
   </div>;
 }
 
+function formatCargo(value: string): string {
+  const text = value.trim().replace(/_+/g, ' ').replace(/\s+/g, ' ').toLocaleLowerCase('es');
+  const accented = text.replace(/\bmedico\b/g, 'médico').replace(/\bmedica\b/g, 'médica')
+    .replace(/\bpsicologo\b/g, 'psicólogo').replace(/\bpsicologa\b/g, 'psicóloga')
+    .replace(/\benfermeria\b/g, 'enfermería');
+  return accented.charAt(0).toLocaleUpperCase('es') + accented.slice(1);
+}
+
 function Evoluciones({ historia, onAdd }: { historia: HistoriaClinicaResponse; onAdd: () => void }) {
   const { user } = useAuth();
   const permissions = historiasClinicasPermissions(user?.rol);
@@ -99,14 +101,21 @@ function Evoluciones({ historia, onAdd }: { historia: HistoriaClinicaResponse; o
     {detalles.loading && <p role="status" className="text-sm">Cargando evoluciones…</p>}
     {detalles.error && <ErrorNotice message={detalles.error} retry={detalles.reload} />}
     {detalles.data?.length === 0 && <p className="text-sm">Esta historia clínica aún no tiene evoluciones.</p>}
-    <div className="space-y-0">{detalles.data?.map((detalle, index, all) => <div key={detalle.id} data-detalle-id={detalle.id} data-historia-id={detalle.historiaClinicaId} className="flex gap-4">
+    <div className="clinical-timeline space-y-0">{detalles.data?.map((detalle, index, all) => <div key={detalle.id} data-detalle-id={detalle.id} data-historia-id={detalle.historiaClinicaId} className="flex gap-4">
       <div className="flex flex-col items-center">
         <div className="w-3 h-3 rounded-full mt-2 shrink-0" style={{ background: 'var(--secondary)', border: '2px solid var(--card)', boxShadow: '0 0 0 2px var(--secondary)' }} />
         {index < all.length - 1 && <div className="w-px flex-1 mt-1" style={{ background: 'var(--border)' }} />}
       </div>
-      <div className="pb-5 min-w-0">
+      <div className="pb-6 min-w-0 flex-1">
         <p className="text-xs font-semibold mt-1.5 mb-1" style={{ color: 'var(--muted-foreground)' }}>{formatFecha(detalle.fecha)}</p>
-        <p className="text-sm whitespace-pre-wrap break-words" style={{ color: 'var(--foreground)' }}>{detalle.observaciones || '—'}</p>
+        <p className="text-sm font-semibold break-words" style={{ color: 'var(--primary)' }}>
+          {detalle.profesionalNombre == null || detalle.profesionalApellido == null
+            ? 'Profesional no informado'
+            : `${detalle.profesionalNombre} ${detalle.profesionalApellido}`}
+        </p>
+        {detalle.profesionalCargo && <p className="text-xs break-words mt-0.5" style={{ color: 'var(--muted-foreground)' }}>{formatCargo(detalle.profesionalCargo)}</p>}
+        <p className="text-xs font-medium mt-3 mb-1" style={{ color: 'var(--muted-foreground)' }}>Evolución clínica</p>
+        <p className="text-sm leading-7 whitespace-pre-wrap break-words rounded-lg p-3 bg-muted" style={{ color: 'var(--foreground)' }}>{detalle.observaciones || '—'}</p>
       </div>
     </div>)}</div>
   </div>;

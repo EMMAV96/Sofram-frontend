@@ -23,6 +23,10 @@ export interface DetalleHistoriaClinicaResponse {
   historiaClinicaId: number;
   fecha: string;
   observaciones: string | null;
+  profesionalId: number | null;
+  profesionalNombre: string | null;
+  profesionalApellido: string | null;
+  profesionalCargo: string | null;
 }
 export interface AntecedentesHistoriaClinicaRequest {
   antecedentesPersonales?: string | null;

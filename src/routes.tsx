@@ -1,3 +1,4 @@
+import { canAccessPersonal } from './auth/personalPermissions';
 import { createBrowserRouter, Navigate } from 'react-router';
 import { AppLayout } from './layouts/AppLayout';
 import { LoginPage } from './pages/LoginPage';
@@ -33,7 +34,7 @@ export const router = createBrowserRouter([
           { path: 'habitaciones', Component: HabitacionesPage },
           { path: 'historia-clinica', Component: HistoriaClinicaPage },
           { path: 'gestion-medica', Component: GestionMedicaPage },
-          { path: 'personal', Component: PersonalPage },
+          { element: <ProtectedRoute canAccess={canAccessPersonal} />, children: [{ path: 'personal', Component: PersonalPage }] },
           { path: 'calendario', Component: CalendarioPage },
           { path: 'actividades', Component: ActividadesPage },
           { path: 'reportes', Component: ReportesPage },
