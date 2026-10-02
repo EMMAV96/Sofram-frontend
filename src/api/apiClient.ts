@@ -1,6 +1,6 @@
 import { getStoredToken } from './tokenStorage';
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? '';
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim().replace(/\/+$/, '') ?? '';
 
 export class ApiError extends Error {
   readonly status: number;
@@ -61,6 +61,9 @@ async function readResponseBody(response: Response): Promise<unknown> {
 }
 
 async function requestResponse(path: string, options: RequestOptions = {}): Promise<Response> {
+  if (!API_BASE_URL) {
+    throw new Error('Falta configurar VITE_API_BASE_URL para conectar con la API.');
+  }
   const { body, skipUnauthorizedHandler, headers, ...requestInit } = options;
   const token = getStoredToken();
 
