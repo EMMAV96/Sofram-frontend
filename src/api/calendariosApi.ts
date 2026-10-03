@@ -16,6 +16,9 @@ export interface DetalleCalendarioRequest {
 export interface DetalleCalendarioResponse extends DetalleCalendarioRequest {
   id: number;
   calendarioId: number;
+  actividadId?: number | null;
+  actividadNombre?: string | null;
+  actividadTaller?: string | null;
 }
 
 export const listarCalendarios = (signal?: AbortSignal) => apiRequest<CalendarioResponse[]>('/calendarios', { signal });

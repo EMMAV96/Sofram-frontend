@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
-import { useActividadesCalendario, type ActividadesFranja } from '../components/actividades/useActividadesCalendario';
 import * as api from '../api/calendariosApi';
 import { useAuth } from '../auth/AuthContext';
 import { canViewCalendario, canCreateCalendario, canCreateDetalleCalendario } from '../auth/calendarioPermissions';
@@ -53,7 +52,6 @@ function CalendarioSeleccionado({ calendarioId, controls }: { calendarioId: numb
   const allowed = canViewCalendario(user?.rol);
   const calendario = useApiResource(signal => api.obtenerCalendario(calendarioId, signal), `calendario-${calendarioId}`, allowed);
   const detalles = useApiResource(signal => api.listarDetalles(calendarioId, signal), `detalles-calendario-${calendarioId}`, allowed);
-  const actividades = useActividadesCalendario(detalles.data?.map(d => d.id) ?? [], allowed);
   const [creating, setCreating] = useState(false);
   const [success, setSuccess] = useState('');
   const [focusDate, setFocusDate] = useState<string | undefined>();
@@ -67,7 +65,7 @@ function CalendarioSeleccionado({ calendarioId, controls }: { calendarioId: numb
       </div>
       {detalles.loading ? <p role="status">Cargando horarios…</p> : detalles.error ? <ErrorNotice message={detalles.error} retry={detalles.reload} /> : detalles.data && (
         detalles.data.length === 0 ? <div className="rounded-xl p-5 text-sm" style={cardStyle}>Este calendario aún no tiene horarios.</div>
-          : <VistaTemporal detalles={detalles.data} initialDate={focusDate ?? detalles.data[0].fecha} actividades={actividades} />
+          : <VistaTemporal detalles={detalles.data} initialDate={focusDate ?? detalles.data[0].fecha} />
       )}
     </>}
     {creating && calendario.data && <CalendarioModal mode="detalle" calendario={calendario.data} onClose={() => setCreating(false)} onSaved={detalle => {
@@ -81,19 +79,21 @@ function dateString(date: Date) { return `${date.getFullYear()}-${String(date.ge
 function localDate(value: string) { const [year, month, day] = value.split('-').map(Number); return new Date(year, month - 1, day, 12); }
 const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 type Vista = 'mes' | 'semana' | 'dia' | 'agenda';
-type ActividadesCalendario = { entries: Record<number, ActividadesFranja>; retry: (id: number) => void };
-function Franja({ detalle, actividades }: { detalle: api.DetalleCalendarioResponse; actividades: ActividadesCalendario }) {
-  const items = actividades.entries[detalle.id];
-  return <div data-calendario-id={detalle.calendarioId} data-detalle-calendario-id={detalle.id} className="text-xs px-1.5 py-1 rounded mb-1 break-words" style={{ background: 'rgba(27,67,50,0.1)', color: 'var(--primary)' }} title={`${formatFecha(detalle.fecha)} · ${detalle.horaInicio} - ${detalle.horaFin} · ${detalle.estado}`}>
-    <p className="font-semibold">{detalle.horaInicio} - {detalle.horaFin}</p><p>{detalle.estado}</p>
-    {(!items || items.loading) && <p role="status" className="mt-1 opacity-70">Cargando actividades…</p>}
-    {items?.error && <div role="alert" className="mt-1 text-red-700"><p>{items.error}</p><button type="button" onClick={() => actividades.retry(detalle.id)} className="underline">Reintentar actividades</button></div>}
-    {items?.data?.map(actividad => <Link key={actividad.id} to={`/actividades?actividadId=${actividad.id}`} data-actividad-id={actividad.id} data-detalle-calendario-id={actividad.detalleCalendarioId} className="block mt-2 rounded p-1 hover:underline" style={{ background: 'var(--card)', borderLeft: `3px solid ${['var(--primary)', 'var(--secondary)', 'var(--accent)'][Array.from(actividad.tipo ?? '').reduce((sum, char) => sum + char.charCodeAt(0), 0) % 3]}` }}>
-      <p className="font-semibold">{actividad.nombre}</p><p>{actividad.tipo} · {actividad.estado}</p>
-    </Link>)}
+function Franja({ detalle }: { detalle: api.DetalleCalendarioResponse }) {
+  const hasActividad = detalle.actividadId != null;
+  const taller = detalle.actividadTaller?.trim();
+  const nombre = detalle.actividadNombre?.trim();
+  const horario = `${detalle.horaInicio.slice(0, 5)} - ${detalle.horaFin.slice(0, 5)}`;
+  const title = [formatFecha(detalle.fecha), hasActividad ? taller : null, horario, hasActividad ? nombre : detalle.estado].filter(Boolean).join(' · ');
+  return <div data-calendario-id={detalle.calendarioId} data-detalle-calendario-id={detalle.id} className="text-xs px-1.5 py-1 rounded mb-1 break-words" style={{ background: 'rgba(27,67,50,0.1)', color: 'var(--primary)' }} title={title}>
+    {hasActividad ? <Link to={`/actividades?actividadId=${detalle.actividadId}`} data-actividad-id={detalle.actividadId} data-detalle-calendario-id={detalle.id} className="block leading-snug hover:underline">
+      {(taller || nombre) && <p className="font-semibold">{taller || nombre}</p>}
+      <p className="text-[11px]" style={{ color: 'var(--muted-foreground)' }}>{horario}</p>
+      {taller && nombre && <p className="text-[11px]">{nombre}</p>}
+    </Link> : <><p className="font-semibold">{horario}</p><p>{detalle.estado}</p></>}
   </div>;
 }
-function VistaTemporal({ detalles, initialDate, actividades }: { detalles: api.DetalleCalendarioResponse[]; initialDate: string; actividades: ActividadesCalendario }) {
+function VistaTemporal({ detalles, initialDate }: { detalles: api.DetalleCalendarioResponse[]; initialDate: string }) {
   const [vista, setVista] = useState<Vista>('mes');
   const [date, setDate] = useState(initialDate);
   const current = localDate(date);
@@ -130,11 +130,11 @@ function VistaTemporal({ detalles, initialDate, actividades }: { detalles: api.D
         const key = day ? dateString(day) : '';
         return <div key={key || `empty-${index}`} className={`${vista === 'mes' ? 'min-h-[90px]' : 'min-h-[200px]'} p-1.5`} style={{ border: '1px solid var(--border)', background: !day ? 'var(--muted)' : key === today ? 'rgba(27,67,50,0.04)' : 'var(--card)' }}>
           {day && <><button onClick={() => { setDate(key); setVista('dia'); }} aria-label={`Ver ${formatFecha(key)}`} className="w-6 h-6 rounded-full text-xs mb-1" style={{ background: key === today ? 'var(--primary)' : 'transparent', color: key === today ? 'white' : 'var(--foreground)' }}>{day.getDate()}</button>
-            {detalles.filter(d => d.fecha === key).map(d => <Franja key={d.id} detalle={d} actividades={actividades} />)}</>}
+            {detalles.filter(d => d.fecha === key).map(d => <Franja key={d.id} detalle={d} />)}</>}
         </div>;
       })}</div>
     </div></div> : <div className="rounded-xl p-5 space-y-3" style={cardStyle}>
-      {periodDetails.map(d => <div key={d.id} className="flex flex-col sm:flex-row gap-3 p-4 rounded-lg" style={{ border: '1px solid var(--border)', background: 'var(--background)' }}><p className="text-sm font-semibold shrink-0" style={{ color: 'var(--primary)' }}>{formatFecha(d.fecha)}</p><Franja detalle={d} actividades={actividades} /></div>)}
+      {periodDetails.map(d => <div key={d.id} className="flex flex-col sm:flex-row gap-3 p-4 rounded-lg" style={{ border: '1px solid var(--border)', background: 'var(--background)' }}><p className="text-sm font-semibold shrink-0" style={{ color: 'var(--primary)' }}>{formatFecha(d.fecha)}</p><Franja detalle={d} /></div>)}
     </div>}
   </div>;
 }
