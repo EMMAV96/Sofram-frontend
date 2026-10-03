@@ -6,9 +6,10 @@ import { listarEmpleados } from '../../api/personalApi';
 import { useAuth } from '../../auth/AuthContext';
 import { canViewActividades, canManageParticipaciones } from '../../auth/actividadesPermissions';
 import { ParticipacionModal } from './ParticipacionModal';
+import { ActividadAcciones } from './ActividadAcciones';
 import { ErrorNotice, cardStyle, formatFecha, inputStyle, primaryStyle, useApiResource } from '../residentes/shared';
 
-export function ActividadDetalle({ actividadId }: { actividadId: number }) {
+export function ActividadDetalle({ actividadId, onUpdated, onDeleted }: { actividadId: number; onUpdated: () => void; onDeleted: () => void }) {
   const { user } = useAuth();
   const allowed = canViewActividades(user?.rol);
   const actividad = useApiResource(signal => obtenerActividad(actividadId, signal), `actividad-${actividadId}`, allowed);
@@ -16,7 +17,11 @@ export function ActividadDetalle({ actividadId }: { actividadId: number }) {
   return <div className="rounded-xl p-5 space-y-4" style={cardStyle}>
     {actividad.loading && <p role="status">Cargando actividad…</p>}
     {actividad.error && <ErrorNotice message={actividad.error} retry={actividad.reload} />}
-    {actividad.data && <DatosActividad actividad={actividad.data} />}
+    {actividad.data && <>
+      {actividad.data.estado === 'ELIMINADA' && <p className="rounded-lg bg-muted p-3 text-sm font-semibold" style={{ color: 'var(--danger)' }}>ELIMINADA · Registro histórico</p>}
+      <ActividadAcciones key={actividad.data.id} actividad={actividad.data} onUpdated={() => { actividad.reload(); onUpdated(); }} onDeleted={onDeleted} />
+      <DatosActividad actividad={actividad.data} />
+    </>}
   </div>;
 }
 function DatosActividad({ actividad }: { actividad: ActividadResponse }) {

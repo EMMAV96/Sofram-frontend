@@ -51,6 +51,8 @@ export const obtenerActividad = (id: number, signal?: AbortSignal) => apiRequest
 export const listarActividadesPorDetalle = (id: number, signal?: AbortSignal) => apiRequest<ActividadResponse[]>(`/actividades/detalle-calendario/${id}`, { signal });
 export const listarActividadesPorEmpleado = (id: number, signal?: AbortSignal) => apiRequest<ActividadResponse[]>(`/actividades/empleado/${id}`, { signal });
 export const crearActividad = (request: ActividadRequest) => apiRequest<ActividadResponse>('/actividades', { method: 'POST', body: request });
+export const actualizarActividad = (id: number, request: ActividadRequest) => apiRequest<ActividadResponse>(`/actividades/${id}`, { method: 'PUT', body: request });
+export const eliminarActividad = (id: number) => apiRequest<void>(`/actividades/${id}`, { method: 'DELETE' });
 export const crearParticipacion = (request: ParticipacionActividadRequest) => apiRequest<ParticipacionActividadResponse>('/participaciones-actividades', { method: 'POST', body: request });
 export const obtenerParticipacion = (id: number, signal?: AbortSignal) => apiRequest<ParticipacionActividadResponse>(`/participaciones-actividades/${id}`, { signal });
 export const listarParticipacionesPorActividad = (id: number, signal?: AbortSignal) => apiRequest<ParticipacionActividadResponse[]>(`/participaciones-actividades/actividad/${id}`, { signal });

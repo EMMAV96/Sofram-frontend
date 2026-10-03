@@ -1,6 +1,6 @@
-import { useRef, useState, type FormEvent } from 'react';
-import { crearActividad, type ActividadResponse } from '../../api/actividadesApi';
-import { listarCalendarios, listarDetalles } from '../../api/calendariosApi';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { actualizarActividad, crearActividad, type ActividadResponse } from '../../api/actividadesApi';
+import { listarCalendarios, listarDetalles, obtenerDetalle } from '../../api/calendariosApi';
 import { listarEmpleados } from '../../api/personalApi';
 import { useAuth } from '../../auth/AuthContext';
 import { canCreateActividad } from '../../auth/actividadesPermissions';
@@ -16,20 +16,29 @@ const fields = [
   { name: 'cupoMaximo', label: 'Cupo máximo', type: 'number', required: true },
   { name: 'estado', label: 'Estado', max: 50, required: true },
 ];
-export function ActividadModal({ onClose, onSaved }: { onClose: () => void; onSaved: (actividad: ActividadResponse) => void }) {
+export function ActividadModal({ onClose, onSaved, actividad }: { onClose: () => void; onSaved: (actividad: ActividadResponse) => void; actividad?: ActividadResponse }) {
   const { user } = useAuth();
   const allowed = canCreateActividad(user?.rol);
   const admin = user?.rol === 'ADMINISTRADOR';
   const calendarios = useApiResource(listarCalendarios, 'calendarios-actividad', allowed);
   const [calendarioId, setCalendarioId] = useState('');
+  const initialDetalle = useApiResource(signal => obtenerDetalle(actividad!.detalleCalendarioId, signal), `editar-franja-${actividad?.id}`, allowed && !!actividad);
+  const initialized = useRef(false);
+  useEffect(() => {
+    if (actividad && initialDetalle.data && !initialized.current) {
+      initialized.current = true;
+      setCalendarioId(String(initialDetalle.data.calendarioId));
+    }
+  }, [actividad, initialDetalle.data]);
   const detalles = useApiResource(signal => listarDetalles(Number(calendarioId), signal), `franjas-${calendarioId}`, allowed && !!calendarioId);
   const empleados = useApiResource(listarEmpleados, 'empleados-actividad', allowed && admin);
-  const activos = empleados.data?.filter(e => e.activo === true) ?? [];
+  const activos = empleados.data?.filter(e => e.activo === true || e.id === actividad?.empleadoId) ?? [];
   const [busy, setBusy] = useState(false);
   const submitting = useRef(false);
   const [error, setError] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const identityMissing = !admin && (!Number.isSafeInteger(user?.empleadoId) || !user?.empleadoId);
+  const responsableId = actividad?.empleadoId ?? user?.empleadoId;
+  const identityMissing = !admin && (!Number.isSafeInteger(responsableId) || !responsableId);
   const blocked = !calendarioId || calendarios.loading || !!calendarios.error || detalles.loading || !!detalles.error || !detalles.data?.length
     || (admin ? empleados.loading || !!empleados.error || activos.length === 0 : identityMissing);
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -39,7 +48,7 @@ export function ActividadModal({ onClose, onSaved }: { onClose: () => void; onSa
     const value = (key: string) => String(data.get(key) ?? '').trim();
     const validation: Record<string, string> = {};
     const detalleCalendarioId = Number(value('detalleCalendarioId'));
-    const empleadoId = admin ? Number(value('empleadoId')) : user!.empleadoId;
+    const empleadoId = admin ? Number(value('empleadoId')) : responsableId!;
     if (!detalles.data?.some(d => d.id === detalleCalendarioId && d.calendarioId === Number(calendarioId))) validation.detalleCalendarioId = 'Seleccione una franja del calendario.';
     if (admin && !activos.some(e => e.id === empleadoId)) validation.empleadoId = 'Seleccione un empleado activo.';
     for (const field of fields) {
@@ -50,27 +59,30 @@ export function ActividadModal({ onClose, onSaved }: { onClose: () => void; onSa
     setError(''); setErrors(validation);
     if (Object.keys(validation).length) return;
     submitting.current = true; setBusy(true);
-    try { onSaved(await crearActividad({ detalleCalendarioId, empleadoId, nombre: value('nombre'), taller: value('taller') || null, descripcion: value('descripcion') || null, tipo: value('tipo'), duracion: Number(value('duracion')), cupoMaximo: Number(value('cupoMaximo')), estado: value('estado') })); }
+    const request = { detalleCalendarioId, empleadoId, nombre: value('nombre'), taller: value('taller') || null, descripcion: value('descripcion') || null, tipo: value('tipo'), duracion: Number(value('duracion')), cupoMaximo: Number(value('cupoMaximo')), estado: value('estado') };
+    try { onSaved(await (actividad ? actualizarActividad(actividad.id, request) : crearActividad(request))); }
     catch (error: unknown) { setError(errorMessage(error)); setErrors(fieldErrors(error)); }
     finally { submitting.current = false; setBusy(false); }
   }
   if (!allowed) return null;
-  return <Modal title="Nueva actividad" busy={busy} onClose={onClose}>
+  return <Modal title={actividad ? 'Editar actividad' : 'Nueva actividad'} busy={busy} onClose={onClose}>
     <form onSubmit={submit} className="space-y-4">
       {error && <ErrorNotice message={error} />}
+      {actividad && initialDetalle.loading && <p role="status">Cargando calendario de la actividad…</p>}
+      {actividad && initialDetalle.error && <ErrorNotice message={initialDetalle.error} retry={initialDetalle.reload} />}
       {identityMissing && <ErrorNotice message="La sesión no tiene un empleado asociado válido. No se puede crear la actividad." />}
       {calendarios.loading && <p role="status">Cargando calendarios…</p>}
       {calendarios.error && <ErrorNotice message={calendarios.error} retry={calendarios.reload} />}
       {calendarios.data?.length === 0 && <p>No hay calendarios disponibles. Primero cree un calendario y una franja en Calendario.</p>}
       <fieldset disabled={busy} className="space-y-4">
         <div><label htmlFor="actividad-calendario" className="block text-xs font-medium mb-1">Calendario *</label>
-          <select id="actividad-calendario" required value={calendarioId} onChange={e => setCalendarioId(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm" style={inputStyle}>
+          <select id="actividad-calendario" required disabled={!!actividad && !initialized.current} value={calendarioId} onChange={e => setCalendarioId(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm" style={inputStyle}>
             <option value="">Seleccione un calendario</option>{calendarios.data?.map(c => <option key={c.id} value={c.id}>{c.nombre} — {c.periodo} — {c.anio}</option>)}
           </select>
         </div>
         {calendarioId && <div>
           <label htmlFor="actividad-detalle" className="block text-xs font-medium mb-1">Franja del calendario *</label>
-          <select key={calendarioId} id="actividad-detalle" name="detalleCalendarioId" required defaultValue="" disabled={detalles.loading || !!detalles.error} aria-invalid={!!errors.detalleCalendarioId} aria-describedby={errors.detalleCalendarioId ? 'actividad-detalle-error' : undefined} className="w-full px-3 py-2 rounded-lg text-sm" style={inputStyle}>
+          <select key={`${calendarioId}-${detalles.loading}`} id="actividad-detalle" name="detalleCalendarioId" required defaultValue={actividad && initialDetalle.data?.calendarioId === Number(calendarioId) ? String(actividad.detalleCalendarioId) : ''} disabled={detalles.loading || !!detalles.error} aria-invalid={!!errors.detalleCalendarioId} aria-describedby={errors.detalleCalendarioId ? 'actividad-detalle-error' : undefined} className="w-full px-3 py-2 rounded-lg text-sm" style={inputStyle}>
             <option value="">Seleccione una franja</option>{detalles.data?.map(d => <option key={d.id} value={d.id}>{formatFecha(d.fecha)} — {d.horaInicio} a {d.horaFin} — {d.estado} (#{d.id})</option>)}
           </select>
           {detalles.loading && <p role="status">Cargando franjas…</p>}{detalles.error && <ErrorNotice message={detalles.error} retry={detalles.reload} />}
@@ -79,21 +91,21 @@ export function ActividadModal({ onClose, onSaved }: { onClose: () => void; onSa
         </div>}
         {admin ? <div>
           <label htmlFor="actividad-empleado" className="block text-xs font-medium mb-1">Responsable *</label>
-          <select id="actividad-empleado" name="empleadoId" required defaultValue="" disabled={empleados.loading || !!empleados.error} aria-invalid={!!errors.empleadoId} aria-describedby={errors.empleadoId ? 'actividad-empleado-error' : undefined} className="w-full px-3 py-2 rounded-lg text-sm" style={inputStyle}>
+          <select key={String(empleados.loading)} id="actividad-empleado" name="empleadoId" required defaultValue={actividad?.empleadoId ?? ''} disabled={empleados.loading || !!empleados.error} aria-invalid={!!errors.empleadoId} aria-describedby={errors.empleadoId ? 'actividad-empleado-error' : undefined} className="w-full px-3 py-2 rounded-lg text-sm" style={inputStyle}>
             <option value="">Seleccione un empleado</option>{activos.map(e => <option key={e.id} value={e.id}>{e.apellido}, {e.nombre} — {e.cargoNombre} — DNI {e.dni}</option>)}
           </select>
           {empleados.loading && <p role="status">Cargando empleados…</p>}{empleados.error && <ErrorNotice message={empleados.error} retry={empleados.reload} />}
           {!empleados.loading && !empleados.error && activos.length === 0 && <p className="text-sm">No hay empleados activos disponibles.</p>}
-        </div> : <p className="text-sm">Responsable asociado a la sesión.</p>}
+        </div> : <p className="text-sm">{actividad ? `Responsable: empleado #${actividad.empleadoId}` : 'Responsable asociado a la sesión.'}</p>}
         {errors.empleadoId && <p id="actividad-empleado-error" className="text-xs text-red-700">{errors.empleadoId}</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{fields.map(field => <div key={field.name}>
           <label htmlFor={`actividad-${field.name}`} className="block text-xs font-medium mb-1">{field.label}{field.required ? ' *' : ''}</label>
-          {field.name === 'descripcion' ? <textarea id={`actividad-${field.name}`} name={field.name} maxLength={field.max} rows={3} aria-invalid={!!errors[field.name]} aria-describedby={errors[field.name] ? `${field.name}-error` : undefined} className="w-full px-3 py-2 rounded-lg text-sm" style={inputStyle} />
-            : <input id={`actividad-${field.name}`} name={field.name} type={field.type ?? 'text'} min={field.type === 'number' ? 1 : undefined} step={field.type === 'number' ? 1 : undefined} maxLength={field.max} required={field.required} aria-invalid={!!errors[field.name]} aria-describedby={errors[field.name] ? `${field.name}-error` : undefined} className="w-full px-3 py-2 rounded-lg text-sm" style={inputStyle} />}
+          {field.name === 'descripcion' ? <textarea id={`actividad-${field.name}`} name={field.name} defaultValue={actividad?.descripcion ?? ''} maxLength={field.max} rows={3} aria-invalid={!!errors[field.name]} aria-describedby={errors[field.name] ? `${field.name}-error` : undefined} className="w-full px-3 py-2 rounded-lg text-sm" style={inputStyle} />
+            : <input id={`actividad-${field.name}`} name={field.name} defaultValue={actividad?.[field.name as keyof ActividadResponse] ?? ''} type={field.type ?? 'text'} min={field.type === 'number' ? 1 : undefined} step={field.type === 'number' ? 1 : undefined} maxLength={field.max} required={field.required} aria-invalid={!!errors[field.name]} aria-describedby={errors[field.name] ? `${field.name}-error` : undefined} className="w-full px-3 py-2 rounded-lg text-sm" style={inputStyle} />}
           {errors[field.name] && <p id={`${field.name}-error`} className="text-xs text-red-700">{errors[field.name]}</p>}
         </div>)}</div>
       </fieldset>
-      <div className="flex justify-end gap-3"><button type="button" disabled={busy} onClick={onClose} className="px-4 py-2 rounded-lg text-sm" style={inputStyle}>Cancelar</button><button type="submit" disabled={busy || blocked} className="px-4 py-2 rounded-lg text-sm disabled:opacity-50" style={primaryStyle}>{busy ? 'Guardando…' : 'Crear actividad'}</button></div>
+      <div className="flex justify-end gap-3"><button type="button" disabled={busy} onClick={onClose} className="px-4 py-2 rounded-lg text-sm" style={inputStyle}>Cancelar</button><button type="submit" disabled={busy || blocked} className="px-4 py-2 rounded-lg text-sm disabled:opacity-50" style={primaryStyle}>{busy ? 'Guardando…' : actividad ? 'Guardar cambios' : 'Crear actividad'}</button></div>
     </form>
   </Modal>;
 }

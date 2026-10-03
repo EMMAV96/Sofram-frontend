@@ -39,13 +39,17 @@ export function ActividadesPage() {
         {actividades.data?.length === 0 && <div className="rounded-xl p-5 text-sm" style={cardStyle}>No hay actividades registradas.</div>}
         {filteredActivities?.map(a => <button key={a.id} onClick={() => select(a.id)} aria-pressed={id === a.id} className="activity-card w-full text-left rounded-xl p-4 transition-all hover:shadow-sm" style={{ background: 'var(--card)', border: id === a.id ? '2px solid var(--primary)' : '1px solid var(--border)' }}>
           {a.taller?.trim() && <p className="text-xs font-medium break-words mb-1" style={{ color: 'var(--muted-foreground)' }}>Taller: {a.taller}</p>}
-          <p className="font-semibold" style={{ color: 'var(--primary)', fontFamily: 'Lora, serif' }}>{a.nombre}</p>
+          {a.estado === 'ELIMINADA' && <p className="text-xs font-semibold mb-1" style={{ color: 'var(--danger)' }}>ELIMINADA · Registro histórico</p>}
+          <p className="font-semibold" style={{ color: a.estado === 'ELIMINADA' ? 'var(--muted-foreground)' : 'var(--primary)', fontFamily: 'Lora, serif' }}>{a.nombre}</p>
           <p className="text-sm line-clamp-2 break-words mt-1">{a.descripcion || 'Sin descripción'}</p>
           <div className="flex flex-wrap gap-3 mt-2 text-xs" style={{ color: 'var(--muted-foreground)' }}><span className="rounded-full bg-muted px-2 py-1 text-primary">{a.tipo}</span><span>Duración: {a.duracion}</span><span>Cupo máximo: {a.cupoMaximo}</span><span className="rounded-full bg-muted px-2 py-1 text-primary">{a.estado}</span></div>
           {user?.rol === 'TERAPISTA_OCUPACIONAL' && a.empleadoId === user.empleadoId && <p className="text-xs mt-1">Actividad propia</p>}
         </button>)}
       </div>
-      <div>{id !== null ? <ActividadDetalle key={`${id}-${user?.rol}`} actividadId={id} /> : idParam !== null ? <ErrorNotice message="El identificador de actividad no es válido." /> : <div className="rounded-xl p-8 text-center" style={{ background: 'var(--card)', border: '1px dashed var(--border)' }}><p className="text-sm font-medium" style={{ color: 'var(--muted-foreground)' }}>Seleccione una actividad para consultar su información.</p></div>}</div>
+      <div>{id !== null ? <ActividadDetalle key={`${id}-${user?.rol}`} actividadId={id} onUpdated={() => { setSuccess('Actividad actualizada correctamente.'); actividades.reload(); }} onDeleted={() => {
+        const next = new URLSearchParams(params); next.delete('actividadId'); setParams(next);
+        setSuccess('Eliminación procesada correctamente. El listado se actualizará con los registros conservados por el servidor.'); actividades.reload();
+      }} /> : idParam !== null ? <ErrorNotice message="El identificador de actividad no es válido." /> : <div className="rounded-xl p-8 text-center" style={{ background: 'var(--card)', border: '1px dashed var(--border)' }}><p className="text-sm font-medium" style={{ color: 'var(--muted-foreground)' }}>Seleccione una actividad para consultar su información.</p></div>}</div>
     </div>
     {creating && canCreateActividad(user?.rol) && <ActividadModal onClose={() => setCreating(false)} onSaved={actividad => {
       setCreating(false); setSuccess('Actividad creada correctamente.'); const next = new URLSearchParams(params); next.set('actividadId', String(actividad.id)); setParams(next); actividades.reload();
