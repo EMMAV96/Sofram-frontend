@@ -4,6 +4,7 @@ export interface ActividadRequest {
   detalleCalendarioId: number;
   empleadoId: number;
   nombre: string;
+  taller?: string | null;
   descripcion?: string | null;
   tipo: string;
   duracion: number;
@@ -15,6 +16,7 @@ export interface ActividadResponse {
   detalleCalendarioId: number;
   empleadoId: number;
   nombre: string;
+  taller?: string | null;
   descripcion: string | null;
   tipo: string;
   duracion: number;

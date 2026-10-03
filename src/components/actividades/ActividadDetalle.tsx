@@ -28,6 +28,7 @@ function DatosActividad({ actividad }: { actividad: ActividadResponse }) {
   return <>
     <h3 style={{ fontFamily: 'Lora, serif', fontWeight: 600, fontSize: 16, color: 'var(--primary)' }}>{actividad.nombre}</h3>
     <div className="grid grid-cols-2 gap-2 text-sm">
+      {actividad.taller?.trim() && <p className="col-span-2 break-words">Taller: {actividad.taller}</p>}
       <p className="col-span-2 whitespace-pre-wrap break-words">{actividad.descripcion || 'Sin descripción'}</p>
       <p>Tipo: {actividad.tipo}</p><p>Duración: {actividad.duracion}</p><p>Cupo máximo: {actividad.cupoMaximo}</p><p>Estado: {actividad.estado}</p>
       {user?.rol === 'ADMINISTRADOR' ? <>

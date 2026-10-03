@@ -8,7 +8,8 @@ import { ResidenteModal as Modal } from '../residentes/ResidenteModal';
 import { ErrorNotice, errorMessage, fieldErrors, formatFecha, inputStyle, primaryStyle, useApiResource } from '../residentes/shared';
 
 const fields = [
-  { name: 'nombre', label: 'Nombre', max: 150, required: true },
+  { name: 'taller', label: 'Taller' },
+  { name: 'nombre', label: 'Nombre de la actividad', max: 150, required: true },
   { name: 'descripcion', label: 'Descripción', max: 2000 },
   { name: 'tipo', label: 'Tipo', max: 100, required: true },
   { name: 'duracion', label: 'Duración', type: 'number', required: true },
@@ -49,7 +50,7 @@ export function ActividadModal({ onClose, onSaved }: { onClose: () => void; onSa
     setError(''); setErrors(validation);
     if (Object.keys(validation).length) return;
     submitting.current = true; setBusy(true);
-    try { onSaved(await crearActividad({ detalleCalendarioId, empleadoId, nombre: value('nombre'), descripcion: value('descripcion') || null, tipo: value('tipo'), duracion: Number(value('duracion')), cupoMaximo: Number(value('cupoMaximo')), estado: value('estado') })); }
+    try { onSaved(await crearActividad({ detalleCalendarioId, empleadoId, nombre: value('nombre'), taller: value('taller') || null, descripcion: value('descripcion') || null, tipo: value('tipo'), duracion: Number(value('duracion')), cupoMaximo: Number(value('cupoMaximo')), estado: value('estado') })); }
     catch (error: unknown) { setError(errorMessage(error)); setErrors(fieldErrors(error)); }
     finally { submitting.current = false; setBusy(false); }
   }

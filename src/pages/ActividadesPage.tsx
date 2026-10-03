@@ -17,6 +17,7 @@ export function ActividadesPage() {
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
   const [success, setSuccess] = useState('');
+  const filteredActivities = actividades.data?.filter(a => `${a.taller ?? ''} ${a.nombre} ${a.tipo} ${a.estado}`.toLowerCase().includes(search.trim().toLowerCase()));
   function select(actividadId: number) {
     const next = new URLSearchParams(params);
     if (id === actividadId) next.delete('actividadId'); else next.set('actividadId', String(actividadId));
@@ -29,14 +30,15 @@ export function ActividadesPage() {
       {canCreateActividad(user?.rol) && <button onClick={() => { setSuccess(''); setCreating(true); }} className="px-4 py-2.5 rounded-lg text-sm font-semibold" style={primaryStyle}>+ Crear actividad</button>}
     </div>
     {success && <p role="status" className="rounded-lg p-3 text-sm" style={{ background: '#DCFCE7', color: '#166534' }}>{success}</p>}
-    <label className="block text-sm font-medium">Buscar actividad<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Nombre, tipo o estado" className="block mt-2 w-full rounded-lg border border-border bg-card px-4 py-2.5" /></label>
+    <label className="block text-sm font-medium">Buscar actividad<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Taller, nombre, tipo o estado" className="block mt-2 w-full rounded-lg border border-border bg-card px-4 py-2.5" /></label>
     <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-5">
       <div className="space-y-3 max-h-[75vh] overflow-y-auto pr-1">
         {actividades.loading && <p role="status">Cargando actividades…</p>}
         {actividades.error && <ErrorNotice message={actividades.error} retry={actividades.reload} />}
-        {actividades.data && actividades.data.length > 0 && !actividades.data.some(a => (a.nombre + ' ' + a.tipo + ' ' + a.estado).toLowerCase().includes(search.trim().toLowerCase())) && <p role="status" className="text-sm">No hay actividades que coincidan con la búsqueda.</p>}
+        {actividades.data && actividades.data.length > 0 && filteredActivities?.length === 0 && <p role="status" className="text-sm">No hay actividades que coincidan con la búsqueda.</p>}
         {actividades.data?.length === 0 && <div className="rounded-xl p-5 text-sm" style={cardStyle}>No hay actividades registradas.</div>}
-        {actividades.data?.filter(a => `${a.nombre} ${a.tipo} ${a.estado}`.toLowerCase().includes(search.trim().toLowerCase())).map(a => <button key={a.id} onClick={() => select(a.id)} aria-pressed={id === a.id} className="activity-card w-full text-left rounded-xl p-4 transition-all hover:shadow-sm" style={{ background: 'var(--card)', border: id === a.id ? '2px solid var(--primary)' : '1px solid var(--border)' }}>
+        {filteredActivities?.map(a => <button key={a.id} onClick={() => select(a.id)} aria-pressed={id === a.id} className="activity-card w-full text-left rounded-xl p-4 transition-all hover:shadow-sm" style={{ background: 'var(--card)', border: id === a.id ? '2px solid var(--primary)' : '1px solid var(--border)' }}>
+          {a.taller?.trim() && <p className="text-xs font-medium break-words mb-1" style={{ color: 'var(--muted-foreground)' }}>Taller: {a.taller}</p>}
           <p className="font-semibold" style={{ color: 'var(--primary)', fontFamily: 'Lora, serif' }}>{a.nombre}</p>
           <p className="text-sm line-clamp-2 break-words mt-1">{a.descripcion || 'Sin descripción'}</p>
           <div className="flex flex-wrap gap-3 mt-2 text-xs" style={{ color: 'var(--muted-foreground)' }}><span className="rounded-full bg-muted px-2 py-1 text-primary">{a.tipo}</span><span>Duración: {a.duracion}</span><span>Cupo máximo: {a.cupoMaximo}</span><span className="rounded-full bg-muted px-2 py-1 text-primary">{a.estado}</span></div>
